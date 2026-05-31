@@ -1,36 +1,19 @@
-@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-@theme {
-  --color-surface: #f8faf9;
-  --color-surface-elevated: #ffffff;
-  --color-foreground: #1c1917;
-  --color-muted: #78716c;
-  --color-rose-med: #f9a8d4;
-  --color-rose-med-dark: #ec4899;
-  --color-water: #38bdf8;
-  --color-water-dark: #0ea5e9;
-  --color-emerald-nut: #34d399;
-  --color-emerald-nut-dark: #10b981;
-  --color-violet-ai: #a78bfa;
-  --color-violet-ai-dark: #8b5cf6;
-  --color-border: #e7e5e4;
-  --font-sans: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP",
-    system-ui, sans-serif;
-}
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
 
-* {
-  box-sizing: border-box;
-}
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
 
-html {
-  -webkit-tap-highlight-color: transparent;
-}
-
-body {
-  background: var(--color-surface);
-  color: var(--color-foreground);
-  font-family: var(--font-sans);
-  min-height: 100dvh;
+  body {
+    @apply bg-surface text-foreground font-sans min-h-dvh;
+  }
 }
 
 @layer utilities {
