@@ -25,19 +25,15 @@ git commit -m "Initial commit: クスリ飲み手帳 health app"
 
 # Tạo repo trên GitHub (cần cài GitHub CLI: brew install gh)
 gh auth login
-gh repo create kusuri-nomitechou --private --source=. --push
-```
-
-**Hoặc thủ công:**
-
-1. Vào https://github.com/new → tạo repo `kusuri-nomitechou` (không tick README)
-2. Chạy:
+Repo của bạn: **https://github.com/hoanglongvietqb-creator/kusuritechou**
 
 ```bash
-git remote add origin https://github.com/TEN_GITHUB_CUA_BAN/kusuri-nomitechou.git
-git branch -M main
+cd "/Users/hoanglongviet/Documents/クスリ飲み手帳"
+git remote add origin https://github.com/hoanglongvietqb-creator/kusuritechou.git
 git push -u origin main
 ```
+
+(Nếu đã add remote rồi, chỉ cần `git push -u origin main`.)
 
 > `.env` **không** được đẩy lên GitHub (đã có trong `.gitignore`).
 
