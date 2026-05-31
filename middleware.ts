@@ -11,11 +11,17 @@ export default auth((req) => {
   if (isApiAuth) return NextResponse.next();
 
   if (!isLoggedIn && !isAuthPage) {
-    return NextResponse.redirect(new URL("/login", req.nextUrl));
+    const url = req.nextUrl.clone();
+    url.pathname = "/login";
+    url.search = "";
+    return NextResponse.redirect(url);
   }
 
   if (isLoggedIn && isAuthPage) {
-    return NextResponse.redirect(new URL("/", req.nextUrl));
+    const url = req.nextUrl.clone();
+    url.pathname = "/";
+    url.search = "";
+    return NextResponse.redirect(url);
   }
 
   return NextResponse.next();

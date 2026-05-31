@@ -6,6 +6,15 @@ import { authConfig } from "@/auth.config";
 import { getDb } from "@/lib/db";
 import { users } from "@/lib/db/schema";
 
+const authUrl = process.env.AUTH_URL?.trim();
+if (authUrl) {
+  try {
+    new URL(authUrl);
+  } catch {
+    delete process.env.AUTH_URL;
+  }
+}
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
   providers: [

@@ -118,6 +118,7 @@ Người dùng mở domain trên **điện thoại** → dùng như web app; có
 | Lỗi | Cách sửa |
 |-----|----------|
 | Đăng nhập redirect loop | `AUTH_URL` sai — phải đúng URL site |
+| `TypeError: Invalid URL` | `AUTH_URL` thiếu `https://`, có khoảng trắng, hoặc sai — sửa hoặc **xóa** biến (dùng `trustHost`) |
 | API 500 / DB | `DATABASE_URL` sai hoặc chưa `db:push` trên Neon |
 | AI 503 | Thiếu `GEMINI_API_KEY` trên Vercel |
 | Build fail | Chạy `npm run build` local để xem lỗi trước |
