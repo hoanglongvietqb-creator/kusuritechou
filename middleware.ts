@@ -5,7 +5,9 @@ export default auth((req) => {
   const isLoggedIn = !!req.auth;
   const isAuthPage =
     req.nextUrl.pathname.startsWith("/login") ||
-    req.nextUrl.pathname.startsWith("/register");
+    req.nextUrl.pathname.startsWith("/register") ||
+    req.nextUrl.pathname.startsWith("/forgot-password") ||
+    req.nextUrl.pathname.startsWith("/reset-password");
   const isApiAuth = req.nextUrl.pathname.startsWith("/api/auth");
 
   if (isApiAuth) return NextResponse.next();

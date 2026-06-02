@@ -2,7 +2,14 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { FoodPresetGrid, type FoodPreset } from "@/components/diet/FoodPresetGrid";
+import { CustomFoodForm } from "@/components/diet/CustomFoodForm";
+import {
+  UserFoodItemList,
+  type UserFoodItem,
+} from "@/components/diet/UserFoodItemList";
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { formatTokyo } from "@/lib/timezone";
 
 type MealLog = {
@@ -14,19 +21,25 @@ type MealLog = {
 
 export default function DietPage() {
   const [presets, setPresets] = useState<FoodPreset[]>([]);
+  const [customItems, setCustomItems] = useState<UserFoodItem[]>([]);
   const [logs, setLogs] = useState<MealLog[]>([]);
   const [totalCalories, setTotalCalories] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [editingLogId, setEditingLogId] = useState<string | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editCalories, setEditCalories] = useState("");
 
   const load = useCallback(async () => {
-    const [presetsRes, dietRes] = await Promise.all([
+    const [presetsRes, dietRes, itemsRes] = await Promise.all([
       fetch("/api/diet/presets"),
       fetch("/api/diet"),
+      fetch("/api/diet/items"),
     ]);
     setPresets(await presetsRes.json());
     const diet = await dietRes.json();
     setLogs(diet.logs);
     setTotalCalories(diet.totalCalories);
+    setCustomItems(await itemsRes.json());
   }, []);
 
   useEffect(() => {
@@ -41,12 +54,40 @@ export default function DietPage() {
       body: JSON.stringify({
         name: preset.nameJa,
         calories: preset.calories,
-        presetId: preset.id,
+        presetId: preset.isCustom ? undefined : preset.id,
+        userFoodItemId: preset.isCustom ? preset.id : undefined,
       }),
     });
     await load();
     setLoading(false);
   }
+
+  function startEditLog(log: MealLog) {
+    setEditingLogId(log.id);
+    setEditName(log.name);
+    setEditCalories(String(log.calories));
+  }
+
+  async function saveEditLog(id: string) {
+    const kcal = parseInt(editCalories, 10);
+    if (!editName.trim() || !kcal) return;
+    await fetch(`/api/diet/logs/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: editName.trim(), calories: kcal }),
+    });
+    setEditingLogId(null);
+    load();
+  }
+
+  async function deleteLog(id: string) {
+    if (!confirm("この記録を削除しますか？")) return;
+    await fetch(`/api/diet/logs/${id}`, { method: "DELETE" });
+    load();
+  }
+
+  const globalPresets = presets.filter((p) => !p.isCustom);
+  const customPresets = presets.filter((p) => p.isCustom);
 
   return (
     <div className="space-y-6">
@@ -60,9 +101,22 @@ export default function DietPage() {
         </Card>
       </header>
 
+      <CustomFoodForm onCreated={load} />
+
+      {customItems.length > 0 && (
+        <UserFoodItemList items={customItems} onChanged={load} />
+      )}
+
+      {customPresets.length > 0 && (
+        <section>
+          <h2 className="font-semibold text-sm mb-3">マイメニュー（クイック追加）</h2>
+          <FoodPresetGrid presets={customPresets} onSelect={addMeal} loading={loading} />
+        </section>
+      )}
+
       <section>
         <h2 className="font-semibold text-sm mb-3">クイック追加（ベトナム料理）</h2>
-        <FoodPresetGrid presets={presets} onSelect={addMeal} loading={loading} />
+        <FoodPresetGrid presets={globalPresets} onSelect={addMeal} loading={loading} />
       </section>
 
       <section>
@@ -74,15 +128,45 @@ export default function DietPage() {
             {logs.map((log) => (
               <li
                 key={log.id}
-                className="flex justify-between text-sm bg-emerald-50 rounded-xl px-3 py-2"
+                className="text-sm bg-emerald-50 rounded-xl px-3 py-2"
               >
-                <span>{log.name}</span>
-                <span>
-                  {log.calories} kcal ·{" "}
-                  <span className="text-muted">
-                    {formatTokyo(new Date(log.loggedAt), "HH:mm")}
-                  </span>
-                </span>
+                {editingLogId === log.id ? (
+                  <div className="space-y-2">
+                    <Input value={editName} onChange={(e) => setEditName(e.target.value)} />
+                    <Input
+                      type="number"
+                      value={editCalories}
+                      onChange={(e) => setEditCalories(e.target.value)}
+                    />
+                    <div className="flex gap-2">
+                      <Button size="sm" variant="emerald" onClick={() => saveEditLog(log.id)}>
+                        保存
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => setEditingLogId(null)}>
+                        取消
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex justify-between items-start gap-2">
+                    <span>
+                      {log.name}
+                      <br />
+                      <span className="text-emerald-nut-dark">{log.calories} kcal</span>
+                      <span className="text-muted ml-2">
+                        {formatTokyo(new Date(log.loggedAt), "HH:mm")}
+                      </span>
+                    </span>
+                    <div className="flex gap-1 shrink-0">
+                      <Button size="sm" variant="outline" onClick={() => startEditLog(log)}>
+                        編集
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => deleteLog(log.id)}>
+                        削除
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </li>
             ))}
           </ul>

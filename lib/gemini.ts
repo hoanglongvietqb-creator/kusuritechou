@@ -18,14 +18,30 @@ export function getGeminiModel() {
   return process.env.GEMINI_MODEL ?? "gemini-2.0-flash";
 }
 
+export function isGeminiConfigured(): boolean {
+  return !!process.env.GEMINI_API_KEY?.trim();
+}
+
 export async function generateText(prompt: string, systemInstruction?: string) {
-  const ai = getClient();
-  const response = await ai.models.generateContent({
-    model: getGeminiModel(),
-    contents: prompt,
-    config: systemInstruction ? { systemInstruction } : undefined,
-  });
-  return response.text ?? "";
+  try {
+    const ai = getClient();
+    const response = await ai.models.generateContent({
+      model: getGeminiModel(),
+      contents: prompt,
+      config: systemInstruction ? { systemInstruction } : undefined,
+    });
+    const text = response.text ?? "";
+    if (!text.trim()) {
+      throw new Error("Empty response from Gemini");
+    }
+    return text;
+  } catch (e) {
+    const message = e instanceof Error ? e.message : "Gemini API error";
+    if (message.includes("API key") || message.includes("GEMINI")) {
+      throw new Error("GEMINI_API_KEY is not configured");
+    }
+    throw new Error(`Gemini: ${message}`);
+  }
 }
 
 export async function streamText(

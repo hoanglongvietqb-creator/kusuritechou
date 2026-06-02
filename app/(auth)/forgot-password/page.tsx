@@ -1,17 +1,14 @@
 "use client";
 
-import { signIn } from "next-auth/react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardTitle } from "@/components/ui/card";
 
-export default function LoginPage() {
-  const router = useRouter();
+export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -19,24 +16,30 @@ export default function LoginPage() {
     e.preventDefault();
     setLoading(true);
     setError("");
-    const res = await signIn("credentials", {
-      email,
-      password,
-      redirect: false,
+    setMessage("");
+
+    const res = await fetch("/api/auth/forgot-password", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
     });
+    const data = await res.json();
     setLoading(false);
-    if (res?.error) {
-      setError("メールまたはパスワードが正しくありません");
+
+    if (!res.ok) {
+      setError(data.error ?? "送信に失敗しました");
       return;
     }
-    router.push("/");
-    router.refresh();
+    setMessage(data.message ?? "メールを送信しました");
   }
 
   return (
     <div className="mx-auto flex min-h-dvh max-w-md flex-col justify-center px-4">
       <Card className="p-6">
-        <CardTitle className="text-center mb-6">クスリ飲み手帳</CardTitle>
+        <CardTitle className="text-center mb-2">パスワード再設定</CardTitle>
+        <p className="text-sm text-muted text-center mb-6">
+          登録メールアドレスに再設定リンクを送信します
+        </p>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="text-sm font-medium">メール</label>
@@ -47,32 +50,15 @@ export default function LoginPage() {
               required
             />
           </div>
-          <div>
-            <div className="flex items-center justify-between">
-              <label className="text-sm font-medium">パスワード</label>
-              <Link
-                href="/forgot-password"
-                className="text-xs text-violet-ai-dark underline"
-              >
-                お忘れですか？
-              </Link>
-            </div>
-            <Input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
-          </div>
           {error && <p className="text-sm text-red-600">{error}</p>}
+          {message && <p className="text-sm text-emerald-700">{message}</p>}
           <Button type="submit" className="w-full" disabled={loading}>
-            ログイン
+            {loading ? "送信中..." : "リンクを送信"}
           </Button>
         </form>
         <p className="text-center text-sm text-muted mt-4">
-          アカウントをお持ちでない方は{" "}
-          <Link href="/register" className="text-violet-ai-dark underline">
-            新規登録
+          <Link href="/login" className="text-violet-ai-dark underline">
+            ログインに戻る
           </Link>
         </p>
       </Card>

@@ -70,6 +70,11 @@ npm run db:seed
 | `AUTH_URL` | `https://ten-mien-cua-ban.vercel.app` (sửa sau khi có domain) |
 | `GEMINI_API_KEY` | Key từ https://aistudio.google.com/apikey |
 | `GEMINI_MODEL` | `gemini-2.0-flash` |
+| `SMTP_HOST` | `smtp.gmail.com` (hoặc SMTP khác) |
+| `SMTP_PORT` | `587` |
+| `SMTP_USER` | Email gửi |
+| `SMTP_PASS` | App Password (Gmail) |
+| `EMAIL_FROM` | `クスリ飲み手帳 <email@...>` |
 
 5. **Deploy** → đợi build xong → mở URL `https://xxx.vercel.app`
 
@@ -120,7 +125,8 @@ Người dùng mở domain trên **điện thoại** → dùng như web app; có
 | Đăng nhập redirect loop | `AUTH_URL` sai — phải đúng URL site |
 | `TypeError: Invalid URL` | `AUTH_URL` thiếu `https://`, có khoảng trắng, hoặc sai — sửa hoặc **xóa** biến (dùng `trustHost`) |
 | API 500 / DB | `DATABASE_URL` sai hoặc chưa `db:push` trên Neon |
-| AI 503 | Thiếu `GEMINI_API_KEY` trên Vercel |
+| AI 503 | Thiếu `GEMINI_API_KEY` trên Vercel — thêm key → Redeploy |
+| Quên MK không gửi mail | Thiếu SMTP_* / EMAIL_FROM trên Vercel |
 | Build fail | Chạy `npm run build` local để xem lỗi trước |
 
 ---

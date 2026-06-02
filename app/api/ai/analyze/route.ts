@@ -2,18 +2,10 @@ import { NextResponse } from "next/server";
 import { and, eq } from "drizzle-orm";
 import { requireUser } from "@/lib/api-auth";
 import { buildDaySummary } from "@/lib/day-summary";
-import { generateText } from "@/lib/gemini";
+import { generateDailyReport } from "@/lib/ai-generate-report";
+import { isGeminiConfigured } from "@/lib/gemini";
 import { db } from "@/lib/db";
-import { aiReports, type AiReportResult } from "@/lib/db/schema";
-
-const SYSTEM = `あなたは栄養・服薬アドバイザーです。日本語で回答し、JSONのみを返してください。
-形式:
-{
-  "supplements": [{"title": "...", "detail": "..."}],
-  "limits": [{"title": "...", "detail": "..."}],
-  "medicationSafety": [{"title": "...", "detail": "..."}]
-}
-各配列は2〜4項目。医学的診断はせず、一般的な参考情報として述べること。`;
+import { aiReports } from "@/lib/db/schema";
 
 export async function POST(req: Request) {
   const authResult = await requireUser();
@@ -41,25 +33,18 @@ export async function POST(req: Request) {
     }
   }
 
-  if (!process.env.GEMINI_API_KEY) {
+  if (!isGeminiConfigured()) {
     return NextResponse.json(
-      { error: "AI機能は現在利用できません（APIキー未設定）" },
+      {
+        error:
+          "AI機能は利用できません。Vercelの環境変数 GEMINI_API_KEY を設定してください。",
+      },
       { status: 503 }
     );
   }
 
   try {
-    const raw = await generateText(
-      `以下の本日の健康データを分析してください:\n\n${summary.text}`,
-      SYSTEM
-    );
-
-    const jsonMatch = raw.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      throw new Error("Invalid JSON from model");
-    }
-
-    const result = JSON.parse(jsonMatch[0]) as AiReportResult;
+    const result = await generateDailyReport(summary.text);
 
     const existing = await db
       .select({ id: aiReports.id })
@@ -87,9 +72,19 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ cached: false, result });
   } catch (e) {
-    console.error(e);
+    console.error("ai/analyze", e);
+    const msg = e instanceof Error ? e.message : "";
+    if (msg === "GEMINI_NOT_CONFIGURED") {
+      return NextResponse.json(
+        { error: "AI機能は利用できません（APIキー未設定）" },
+        { status: 503 }
+      );
+    }
     return NextResponse.json(
-      { error: "分析に失敗しました。しばらくして再試行してください。" },
+      {
+        error:
+          "分析に失敗しました。GEMINI_API_KEY を確認するか、しばらくして再試行してください。",
+      },
       { status: 500 }
     );
   }
@@ -115,5 +110,10 @@ export async function GET() {
   return NextResponse.json({
     date: summary.dateStr,
     result: cached[0]?.result ?? null,
+    hasData:
+      summary.totalCalories > 0 ||
+      summary.totalWater > 0 ||
+      summary.medicationCount > 0,
+    geminiConfigured: isGeminiConfigured(),
   });
 }

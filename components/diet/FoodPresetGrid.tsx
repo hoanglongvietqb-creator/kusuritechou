@@ -7,6 +7,8 @@ export type FoodPreset = {
   nameJa: string;
   calories: number;
   category: string | null;
+  kind?: "food" | "drink";
+  isCustom?: boolean;
 };
 
 type FoodPresetGridProps = {
@@ -30,7 +32,12 @@ export function FoodPresetGrid({
           onClick={() => onSelect(p)}
           className="h-auto flex-col items-start p-3 text-left border-emerald-nut/30 hover:bg-emerald-50"
         >
-          <span className="font-medium text-sm">{p.nameJa}</span>
+          <span className="font-medium text-sm">
+            {p.nameJa}
+            {p.isCustom && (
+              <span className="ml-1 text-[10px] text-muted">（自分）</span>
+            )}
+          </span>
           <span className="text-xs text-emerald-nut-dark">{p.calories} kcal</span>
         </Button>
       ))}

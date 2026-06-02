@@ -41,6 +41,7 @@ const logSchema = z.object({
   name: z.string().min(1),
   calories: z.number().int().positive(),
   presetId: z.string().uuid().optional(),
+  userFoodItemId: z.string().uuid().optional(),
 });
 
 export async function POST(req: Request) {
@@ -60,6 +61,7 @@ export async function POST(req: Request) {
       name: parsed.data.name,
       calories: parsed.data.calories,
       presetId: parsed.data.presetId,
+      userFoodItemId: parsed.data.userFoodItemId,
       loggedAt: new Date(),
     })
     .returning();

@@ -119,12 +119,26 @@ export const foodPresets = pgTable("food_presets", {
   category: text("category"),
 });
 
+export const userFoodItems = pgTable("user_food_items", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  nameJa: text("name_ja").notNull(),
+  calories: integer("calories").notNull(),
+  kind: text("kind").$type<"food" | "drink">().notNull().default("food"),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+});
+
 export const mealLogs = pgTable("meal_logs", {
   id: uuid("id").primaryKey().defaultRandom(),
   userId: uuid("user_id")
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
   presetId: uuid("preset_id").references(() => foodPresets.id, {
+    onDelete: "set null",
+  }),
+  userFoodItemId: uuid("user_food_item_id").references(() => userFoodItems.id, {
     onDelete: "set null",
   }),
   name: text("name").notNull(),
@@ -146,6 +160,41 @@ export const aiReports = pgTable(
   (t) => [uniqueIndex("ai_reports_user_date_idx").on(t.userId, t.reportDate)]
 );
 
+export const passwordResetTokens = pgTable(
+  "password_reset_tokens",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    tokenHash: text("token_hash").notNull(),
+    expiresAt: timestamp("expires_at", { mode: "date" }).notNull(),
+    createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+  },
+  (t) => [uniqueIndex("password_reset_tokens_hash_idx").on(t.tokenHash)]
+);
+
+export const aiPeriodReports = pgTable(
+  "ai_period_reports",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    periodType: text("period_type").$type<"week" | "month">().notNull(),
+    periodEndDate: date("period_end_date", { mode: "string" }).notNull(),
+    result: jsonb("result").$type<AiPeriodReportResult>().notNull(),
+    createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+  },
+  (t) => [
+    uniqueIndex("ai_period_reports_user_period_idx").on(
+      t.userId,
+      t.periodType,
+      t.periodEndDate
+    ),
+  ]
+);
+
 export const chatMessages = pgTable("chat_messages", {
   id: uuid("id").primaryKey().defaultRandom(),
   userId: uuid("user_id")
@@ -161,5 +210,12 @@ export type AiReportResult = {
   limits: { title: string; detail: string }[];
   medicationSafety: { title: string; detail: string }[];
 };
+
+export type AiPeriodReportResult = AiReportResult & {
+  hydrationInsights?: { title: string; detail: string }[];
+  dietInsights?: { title: string; detail: string }[];
+};
+
+export type FoodItemKind = "food" | "drink";
 
 export type FoodTiming = "before_meal" | "after_meal" | "empty_stomach" | "any";
