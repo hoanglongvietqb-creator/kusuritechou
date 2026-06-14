@@ -31,7 +31,7 @@ export type ReminderToSend = {
   bucketKey: string;
 };
 
-const PRE_WINDOW = 7;
+const PRE_WINDOW = 3;
 const GRACE_MINUTES = 15;
 
 function getTodayBounds(dateStr: string) {
@@ -127,7 +127,7 @@ export async function collectReminders(now = new Date()): Promise<ReminderToSend
       if (isSlotTakenToday(logs, med.id, slotTime, dateStr)) continue;
 
       const slotMinutes = parseTimeToMinutes(slotTime);
-      const preTarget = slotMinutes - 60;
+      const preTarget = slotMinutes - 5;
 
       if (
         prefs.preDoseEnabled &&
@@ -223,7 +223,7 @@ export async function processMedicationReminders(now = new Date()) {
               : "服薬の記録をお願いします";
           const body =
             r.type === "pre_dose"
-              ? `${r.medName} — ${r.slotTime}の1時間前です`
+              ? `${r.medName} — ${r.slotTime}の5分前です`
               : `${r.medName}（${r.slotTime}）の服用を記録してください`;
 
           const result = await sendPushToUser(r.userId, {

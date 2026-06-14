@@ -46,10 +46,10 @@ export async function sendMedicationReminderEmail(
 
   const isPre = data.type === "pre_dose";
   const subject = isPre
-    ? `【クスリ飲み手帳】${data.slotTime}の服薬予定（1時間前）`
+    ? `【クスリ飲み手帳】${data.slotTime}の服薬予定（5分前）`
     : `【クスリ飲み手帳】服薬の記録をお願いします`;
   const text = isPre
-    ? `${data.medName} の服用予定（${data.slotTime}）まであと約1時間です。\n\n記録はこちら: ${medsUrl}`
+    ? `${data.medName} の服用予定（${data.slotTime}）まであと約5分です。\n\n記録はこちら: ${medsUrl}`
     : `${data.medName}（${data.slotTime}）の服用がまだ記録されていません。\n\n今すぐ記録: ${medsUrl}`;
 
   await transporter.sendMail({

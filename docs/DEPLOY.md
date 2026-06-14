@@ -94,7 +94,14 @@ WHERE normalized_name = '' OR normalized_name IS NULL;
 
 Sau deploy lần đầu, cập nhật `AUTH_URL` đúng URL Vercel production (vd. `https://kusuritechou.vercel.app`) rồi **Redeploy**.
 
-**Cron nhắc thuốc:** Vercel Hobby cho 1 cron job — đã cấu hình trong `vercel.json` (mỗi 15 phút). Cần `CRON_SECRET` trên Vercel.
+**Cron nhắc thuốc (trước giờ uống 5 phút):** App nhắc **trước 5 phút** mỗi cữ thuốc, nên cron phải chạy **mỗi 5 phút**. Vercel Hobby chỉ cho cron **1 lần/ngày** → không đủ. Dùng cron ngoài **miễn phí** gọi vào API:
+
+- Đăng ký https://cron-job.org → **Create cronjob**
+- URL: `https://ten-mien-cua-ban.vercel.app/api/cron/med-reminders`
+- Schedule: **Every 5 minutes** (`*/5 * * * *`)
+- Header: `Authorization: Bearer <CRON_SECRET>` (đúng giá trị `CRON_SECRET` đã đặt trên Vercel)
+
+Vẫn cần `CRON_SECRET` trên Vercel để bảo vệ endpoint.
 
 **Web Push:** User vào **服薬 → 通知** → 「通知を許可」. iPhone cần **Thêm vào Màn hình chính** (PWA).
 
