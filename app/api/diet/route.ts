@@ -3,7 +3,8 @@ import { and, eq, gte, lt } from "drizzle-orm";
 import { z } from "zod";
 import { requireUser } from "@/lib/api-auth";
 import { db } from "@/lib/db";
-import { mealLogs } from "@/lib/db/schema";
+import { mealLogs, userNutritionProfiles } from "@/lib/db/schema";
+import { getUserDailyCalorieGoal } from "@/lib/meal-stats";
 
 function getTodayBounds() {
   const dateStr = new Date().toLocaleDateString("en-CA", {
@@ -20,21 +21,35 @@ export async function GET() {
 
   const { start, end } = getTodayBounds();
 
-  const logs = await db
-    .select()
-    .from(mealLogs)
-    .where(
-      and(
-        eq(mealLogs.userId, authResult.userId),
-        gte(mealLogs.loggedAt, start),
-        lt(mealLogs.loggedAt, end)
+  const [logs, dailyCalorieGoal] = await Promise.all([
+    db
+      .select()
+      .from(mealLogs)
+      .where(
+        and(
+          eq(mealLogs.userId, authResult.userId),
+          gte(mealLogs.loggedAt, start),
+          lt(mealLogs.loggedAt, end)
+        )
       )
-    )
-    .orderBy(mealLogs.loggedAt);
+      .orderBy(mealLogs.loggedAt),
+    getUserDailyCalorieGoal(authResult.userId),
+  ]);
 
   const totalCalories = logs.reduce((s, l) => s + l.calories, 0);
 
-  return NextResponse.json({ logs, totalCalories });
+  const [profile] = await db
+    .select({ id: userNutritionProfiles.id })
+    .from(userNutritionProfiles)
+    .where(eq(userNutritionProfiles.userId, authResult.userId))
+    .limit(1);
+
+  return NextResponse.json({
+    logs,
+    totalCalories,
+    dailyCalorieGoal,
+    hasProfile: !!profile,
+  });
 }
 
 const logSchema = z.object({
@@ -42,6 +57,7 @@ const logSchema = z.object({
   calories: z.number().int().positive(),
   presetId: z.string().uuid().optional(),
   userFoodItemId: z.string().uuid().optional(),
+  source: z.enum(["photo", "preset", "manual"]).optional(),
 });
 
 export async function POST(req: Request) {
@@ -54,6 +70,10 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "入力が無効です" }, { status: 400 });
   }
 
+  const source =
+    parsed.data.source ??
+    (parsed.data.presetId || parsed.data.userFoodItemId ? "preset" : "manual");
+
   const [log] = await db
     .insert(mealLogs)
     .values({
@@ -62,6 +82,7 @@ export async function POST(req: Request) {
       calories: parsed.data.calories,
       presetId: parsed.data.presetId,
       userFoodItemId: parsed.data.userFoodItemId,
+      source,
       loggedAt: new Date(),
     })
     .returning();

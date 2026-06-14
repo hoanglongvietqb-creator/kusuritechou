@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { MedCard, type Medication } from "@/components/medications/MedCard";
 import { MedicationForm } from "@/components/medications/MedicationForm";
 import { Plus } from "lucide-react";
+import Link from "next/link";
 import { formatTokyo } from "@/lib/timezone";
 
 export default function MedicationsPage() {
@@ -75,12 +76,20 @@ export default function MedicationsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-rose-med-dark">服薬管理</h1>
-        {!showForm && !editing && (
-          <Button variant="rose" size="sm" onClick={() => setShowForm(true)}>
-            <Plus className="h-4 w-4 mr-1" />
-            追加
-          </Button>
-        )}
+        <div className="flex items-center gap-2">
+          <Link
+            href="/settings/notifications"
+            className="text-xs text-rose-med-dark underline"
+          >
+            通知
+          </Link>
+          {!showForm && !editing && (
+            <Button variant="rose" size="sm" onClick={() => setShowForm(true)}>
+              <Plus className="h-4 w-4 mr-1" />
+              追加
+            </Button>
+          )}
+        </div>
       </div>
 
       {(showForm || editing) && (

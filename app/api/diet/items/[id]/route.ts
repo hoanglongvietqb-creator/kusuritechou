@@ -4,6 +4,7 @@ import { z } from "zod";
 import { requireUser } from "@/lib/api-auth";
 import { db } from "@/lib/db";
 import { userFoodItems } from "@/lib/db/schema";
+import { normalizeMealName } from "@/lib/meal-master";
 
 const updateSchema = z.object({
   nameJa: z.string().min(1).max(100).optional(),
@@ -25,9 +26,19 @@ export async function PATCH(
     return NextResponse.json({ error: "入力が無効です" }, { status: 400 });
   }
 
+  const setValues: {
+    nameJa?: string;
+    calories?: number;
+    kind?: "food" | "drink";
+    normalizedName?: string;
+  } = { ...parsed.data };
+  if (parsed.data.nameJa) {
+    setValues.normalizedName = normalizeMealName(parsed.data.nameJa);
+  }
+
   const [updated] = await db
     .update(userFoodItems)
-    .set(parsed.data)
+    .set(setValues)
     .where(
       and(eq(userFoodItems.id, id), eq(userFoodItems.userId, authResult.userId))
     )

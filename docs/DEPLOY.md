@@ -54,6 +54,16 @@ npm run db:push
 npm run db:seed
 ```
 
+**DB đã có `user_food_items` từ trước:** sau `db:push`, chạy backfill tên chuẩn hóa (một lần) trước khi dùng マスタ từ ảnh:
+
+```sql
+UPDATE user_food_items
+SET normalized_name = lower(trim(name_ja))
+WHERE normalized_name = '' OR normalized_name IS NULL;
+```
+
+**食事 TDEE / 写真マスタ:** Cần bảng `user_nutrition_profiles`, cột `meal_logs.source`, `user_food_items.normalized_name`. Vào **食事 → 栄養プロフィール** để đặt mục tiêu kcal; **写真から記録** tự thêm マイメニュー.
+
 ---
 
 ## Bước 3: Deploy website trên Vercel
@@ -69,16 +79,42 @@ npm run db:seed
 | `AUTH_SECRET` | Chạy `openssl rand -base64 32` |
 | `AUTH_URL` | `https://ten-mien-cua-ban.vercel.app` (sửa sau khi có domain) |
 | `GEMINI_API_KEY` | Key từ https://aistudio.google.com/apikey |
-| `GEMINI_MODEL` | `gemini-2.0-flash` |
+| `GEMINI_MODEL` | `gemini-2.5-flash` (model có vision + quota) |
 | `SMTP_HOST` | `smtp.gmail.com` (hoặc SMTP khác) |
 | `SMTP_PORT` | `587` |
 | `SMTP_USER` | Email gửi |
 | `SMTP_PASS` | App Password (Gmail) |
 | `EMAIL_FROM` | `クスリ飲み手帳 <email@...>` |
+| `CRON_SECRET` | `openssl rand -base64 32` — bảo vệ cron nhắc thuốc |
+| `VAPID_PUBLIC_KEY` | Chạy `npx web-push generate-vapid-keys` |
+| `VAPID_PRIVATE_KEY` | Cùng lệnh trên |
+| `VAPID_SUBJECT` | `mailto:email-cua-ban@gmail.com` |
 
 5. **Deploy** → đợi build xong → mở URL `https://xxx.vercel.app`
 
-Sau deploy lần đầu, cập nhật `AUTH_URL` đúng URL Vercel rồi **Redeploy**.
+Sau deploy lần đầu, cập nhật `AUTH_URL` đúng URL Vercel production (vd. `https://kusuritechou.vercel.app`) rồi **Redeploy**.
+
+**Cron nhắc thuốc:** Vercel Hobby cho 1 cron job — đã cấu hình trong `vercel.json` (mỗi 15 phút). Cần `CRON_SECRET` trên Vercel.
+
+**Web Push:** User vào **服薬 → 通知** → 「通知を許可」. iPhone cần **Thêm vào Màn hình chính** (PWA).
+
+**Seed bài viết dinh dưỡng** (một lần trên Neon):
+
+```bash
+export DATABASE_URL="postgresql://...@neon.tech/...?sslmode=require"
+npm run db:push
+npm run db:seed
+```
+
+**DB đã có `user_food_items` từ trước:** sau `db:push`, backfill tên chuẩn hóa (một lần):
+
+```sql
+UPDATE user_food_items
+SET normalized_name = lower(trim(name_ja))
+WHERE normalized_name = '' OR normalized_name IS NULL;
+```
+
+**食事 TDEE / 写真マスタ:** Bảng `user_nutrition_profiles`, `meal_logs.source`, `user_food_items.normalized_name`. Vào **食事 → 栄養プロフィール**; **写真から記録** tự thêm マイメニュー.
 
 ---
 
@@ -125,8 +161,9 @@ Người dùng mở domain trên **điện thoại** → dùng như web app; có
 | Đăng nhập redirect loop | `AUTH_URL` sai — phải đúng URL site |
 | `TypeError: Invalid URL` | `AUTH_URL` thiếu `https://`, có khoảng trắng, hoặc sai — sửa hoặc **xóa** biến (dùng `trustHost`) |
 | API 500 / DB | `DATABASE_URL` sai hoặc chưa `db:push` trên Neon |
-| AI 503 | Thiếu `GEMINI_API_KEY` trên Vercel — thêm key → Redeploy |
-| Quên MK không gửi mail | Thiếu SMTP_* / EMAIL_FROM trên Vercel |
+| AI 503 / 429 | Thiếu `GEMINI_API_KEY` hoặc hết quota — đổi `GEMINI_MODEL=gemini-2.5-flash` |
+| Quên MK / nhắc thuốc mail | Thiếu SMTP_* / EMAIL_FROM trên Vercel |
+| Push không hoạt động | Thiếu VAPID_* hoặc chưa cài PWA / chưa bấm 通知を許可 |
 | Build fail | Chạy `npm run build` local để xem lỗi trước |
 
 ---

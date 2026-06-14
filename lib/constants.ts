@@ -16,3 +16,6 @@ export const FOOD_TIMING_LABEL: Record<FoodTiming, string> = {
 
 export const AI_DISCLAIMER =
   "本アプリのAI機能は一般的な健康情報の参考であり、医療助言・診断・治療の代替にはなりません。症状がある場合は医療機関にご相談ください。";
+
+export const MEAL_PHOTO_DISCLAIMER =
+  "写真からのカロリーはAIによる推定値です。実際の分量や調理法により異なります。";

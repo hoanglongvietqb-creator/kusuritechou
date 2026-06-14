@@ -8,6 +8,7 @@ import {
   primaryKey,
   date,
   uniqueIndex,
+  boolean,
 } from "drizzle-orm/pg-core";
 import type { AdapterAccountType } from "next-auth/adapters";
 
@@ -119,16 +120,48 @@ export const foodPresets = pgTable("food_presets", {
   category: text("category"),
 });
 
-export const userFoodItems = pgTable("user_food_items", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  userId: uuid("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  nameJa: text("name_ja").notNull(),
-  calories: integer("calories").notNull(),
-  kind: text("kind").$type<"food" | "drink">().notNull().default("food"),
-  createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
-});
+export const userFoodItems = pgTable(
+  "user_food_items",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    nameJa: text("name_ja").notNull(),
+    normalizedName: text("normalized_name").notNull().default(""),
+    calories: integer("calories").notNull(),
+    kind: text("kind").$type<"food" | "drink">().notNull().default("food"),
+    createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+  },
+  (t) => [
+    uniqueIndex("user_food_items_user_normalized_idx").on(
+      t.userId,
+      t.normalizedName
+    ),
+  ]
+);
+
+export const userNutritionProfiles = pgTable(
+  "user_nutrition_profiles",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    gender: text("gender").$type<Gender>().notNull().default("other"),
+    birthYear: integer("birth_year").notNull().default(1990),
+    heightCm: integer("height_cm").notNull().default(170),
+    weightKg: integer("weight_kg").notNull().default(65),
+    activityLevel: text("activity_level")
+      .$type<ActivityLevel>()
+      .notNull()
+      .default("sedentary"),
+    goalType: text("goal_type").$type<GoalType>().notNull().default("maintain"),
+    dailyCalorieGoal: integer("daily_calorie_goal").notNull().default(2000),
+    updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
+  },
+  (t) => [uniqueIndex("user_nutrition_profiles_user_idx").on(t.userId)]
+);
 
 export const mealLogs = pgTable("meal_logs", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -143,6 +176,7 @@ export const mealLogs = pgTable("meal_logs", {
   }),
   name: text("name").notNull(),
   calories: integer("calories").notNull(),
+  source: text("source").$type<MealLogSource>().notNull().default("manual"),
   loggedAt: timestamp("logged_at", { mode: "date" }).notNull(),
 });
 
@@ -195,6 +229,80 @@ export const aiPeriodReports = pgTable(
   ]
 );
 
+export const notificationPreferences = pgTable(
+  "notification_preferences",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    emailReminders: boolean("email_reminders").notNull().default(true),
+    pushReminders: boolean("push_reminders").notNull().default(true),
+    preDoseEnabled: boolean("pre_dose_enabled").notNull().default(true),
+    overdueEnabled: boolean("overdue_enabled").notNull().default(true),
+    quietHoursStart: text("quiet_hours_start"),
+    quietHoursEnd: text("quiet_hours_end"),
+    updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
+  },
+  (t) => [uniqueIndex("notification_preferences_user_idx").on(t.userId)]
+);
+
+export const pushSubscriptions = pgTable(
+  "push_subscriptions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    endpoint: text("endpoint").notNull(),
+    p256dh: text("p256dh").notNull(),
+    auth: text("auth").notNull(),
+    createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+  },
+  (t) => [uniqueIndex("push_subscriptions_endpoint_idx").on(t.endpoint)]
+);
+
+export const notificationDeliveries = pgTable(
+  "notification_deliveries",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    type: text("type").$type<NotificationType>().notNull(),
+    medicationId: uuid("medication_id").references(() => medications.id, {
+      onDelete: "cascade",
+    }),
+    slotTime: text("slot_time").notNull(),
+    channel: text("channel").$type<NotificationChannel>().notNull(),
+    bucketKey: text("bucket_key").notNull().default(""),
+    sentAt: timestamp("sent_at", { mode: "date" }).defaultNow().notNull(),
+  },
+  (t) => [
+    uniqueIndex("notification_deliveries_dedupe_idx").on(
+      t.userId,
+      t.type,
+      t.medicationId,
+      t.slotTime,
+      t.channel,
+      t.bucketKey
+    ),
+  ]
+);
+
+export const nutritionArticles = pgTable(
+  "nutrition_articles",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    slug: text("slug").notNull().unique(),
+    titleJa: text("title_ja").notNull(),
+    bodyMd: text("body_md").notNull(),
+    tags: jsonb("tags").$type<string[]>().notNull().default([]),
+    createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+  },
+  (t) => [uniqueIndex("nutrition_articles_slug_idx").on(t.slug)]
+);
+
 export const chatMessages = pgTable("chat_messages", {
   id: uuid("id").primaryKey().defaultRandom(),
   userId: uuid("user_id")
@@ -218,4 +326,16 @@ export type AiPeriodReportResult = AiReportResult & {
 
 export type FoodItemKind = "food" | "drink";
 
+export type MealLogSource = "photo" | "preset" | "manual";
+
+export type Gender = "male" | "female" | "other";
+
+export type ActivityLevel = "sedentary" | "light" | "moderate" | "active";
+
+export type GoalType = "maintain" | "lose" | "gain";
+
 export type FoodTiming = "before_meal" | "after_meal" | "empty_stomach" | "any";
+
+export type NotificationType = "pre_dose" | "overdue_hourly";
+
+export type NotificationChannel = "email" | "push";

@@ -4,6 +4,7 @@ import { z } from "zod";
 import { requireUser } from "@/lib/api-auth";
 import { db } from "@/lib/db";
 import { userFoodItems } from "@/lib/db/schema";
+import { normalizeMealName } from "@/lib/meal-master";
 
 const createSchema = z.object({
   nameJa: z.string().min(1).max(100),
@@ -39,6 +40,7 @@ export async function POST(req: Request) {
     .values({
       userId: authResult.userId,
       nameJa: parsed.data.nameJa,
+      normalizedName: normalizeMealName(parsed.data.nameJa),
       calories: parsed.data.calories,
       kind: parsed.data.kind,
     })
